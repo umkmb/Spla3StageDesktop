@@ -3,6 +3,16 @@ from tkinter import ttk
 from api_handler import fetch_data
 import datetime
 
+CATEGORY_MAP = {
+    "regular": "レギュラーマッチ",
+    "bankara_challenge": "バンカラマッチ（チャレンジ）",
+    "bankara_open": "バンカラマッチ（オープン）",
+    "x": "Xマッチ",
+    "event": "イベントマッチ",
+    "fest": "フェスマッチ（オープン）",
+    "fest_challenge": "フェスマッチ（チャレンジ）"
+}
+
 class MyApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -44,7 +54,9 @@ class MyApp(tk.Tk):
             widget.destroy()
 
         for category, matches in data.items():
-            ttk.Label(self.frame, text=f"カテゴリ: {category}", font=("Arial", 14, "bold")).pack(anchor="w", pady=5)
+            category_name = CATEGORY_MAP.get(category, category)
+            ttk.Label(self.frame, text=f"カテゴリ: {category_name}", font=("Arial", 14, "bold")).pack(anchor="w", pady=5)
+            #ttk.Label(self.frame, text=f"カテゴリ: {category}", font=("Arial", 14, "bold")).pack(anchor="w", pady=5)
 
             if isinstance(matches, list):
                 for match in matches:
