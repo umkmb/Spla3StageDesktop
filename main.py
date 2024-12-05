@@ -51,7 +51,7 @@ class MyApp(tk.Tk):
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
         # ボタンとイベントバインド
-        self.fetch_button = ttk.Button(self, text="データ更新", command=self.load_data, style="Custom.TButton")
+        self.fetch_button = ttk.Button(self, text="更新", command=self.load_data, style="Custom.TButton")
         self.fetch_button.pack(pady=10)
 
         self.frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
@@ -73,7 +73,7 @@ class MyApp(tk.Tk):
             print(f"An error occurred: {e}")
 
     def display_data(self, data):
-        """JSONデータを整形して表示"""
+        """JSONデータを整形して日時順に複数のマッチを表示（Noneチェック付き）"""
         if not data:
             print("Error: result is empty or None")
             return
@@ -81,13 +81,59 @@ class MyApp(tk.Tk):
         for widget in self.frame.winfo_children():
             widget.destroy()
 
-        for category, matches in data.items():
-            valid_matches = [match for match in matches if match.get("rule")]
-            if valid_matches:
+        # 全てのマッチをリスト化し、日時順にソート
+        matches = []
+        for category, match_list in data.items():
+            for match in match_list:
+                start_time = match.get("start_time")
+                end_time = match.get("end_time")
+                rule = match.get("rule")
+                stages = match.get("stages")
+
+                # `rule` や `stages` が None の場合はスキップ
+                if rule is None or stages is None:
+                    continue
+
+                match["category"] = category
+                matches.append(match)
+
+        # 開始日時でソート
+        matches.sort(key=lambda x: parse(x["start_time"]))
+
+        # 時間帯ごとにグループ化
+        grouped_matches = {}
+        for match in matches:
+            start_time = parse(match["start_time"])
+            end_time = parse(match["end_time"])
+            time_slot = f"{start_time.strftime('%m/%d %H:%M')} - {end_time.strftime('%H:%M')}"
+            if time_slot not in grouped_matches:
+                grouped_matches[time_slot] = []
+            grouped_matches[time_slot].append(match)
+
+        # グループごとに表示
+        for time_slot, slot_matches in grouped_matches.items():
+            ttk.Label(self.frame, text=f"・{time_slot}", font=("Arial", 12, "bold")).pack(anchor="w", pady=5)
+
+            # 各カテゴリごとに整理
+            category_matches = {}
+            for match in slot_matches:
+                category = match["category"]
+                if category not in category_matches:
+                    category_matches[category] = []
+                category_matches[category].append(match)
+
+            for category, matches in category_matches.items():
                 category_name = CATEGORY_MAP.get(category, category)
-                ttk.Label(self.frame, text=f"カテゴリ: {category_name}", font=("Arial", 14, "bold")).pack(anchor="w", pady=5)
-                for match in valid_matches:
-                    self.display_match(match)
+                rule = matches[0].get("rule", {}).get("name", "ルール不明")  # 同じカテゴリでルールは共通
+                ttk.Label(self.frame, text=f"    ・{category_name}[{rule}]", font=("Arial", 10)).pack(anchor="w", pady=2)
+
+                for match in matches:
+                    stages = match.get("stages", [])
+                    for stage in stages:
+                        stage_name = stage.get("name", "不明なステージ")
+                        ttk.Label(self.frame, text=f"        ・{stage_name}", font=("Arial", 10)).pack(anchor="w", pady=2)
+
+            ttk.Separator(self.frame, orient="horizontal").pack(fill="x", pady=10)
 
     def display_match(self, match):
         """1つのマッチデータを整形して表示"""
