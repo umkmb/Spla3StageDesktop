@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 from api_handler import fetch_data
-import datetime
+from datetime import datetime
+from dateutil.parser import parse
 
 CATEGORY_MAP = {
     "regular": "レギュラーマッチ",
@@ -12,6 +13,15 @@ CATEGORY_MAP = {
     "fest": "フェスマッチ（オープン）",
     "fest_challenge": "フェスマッチ（チャレンジ）"
 }
+
+def format_time(iso_time):
+    """ISO 8601形式の日時を日本語形式にフォーマットする"""
+    try:
+        dt = parse(iso_time)  # dateutil.parserを使用して解析
+        return dt.strftime("%Y年%m月%d日 %H:%M:%S")  # 例: 2024年12月05日 11:00:00
+    except Exception as e:
+        print(f"日時フォーマットエラー: {e}")
+        return "不明な日時"
 
 class MyApp(tk.Tk):
     def __init__(self):
@@ -70,13 +80,19 @@ class MyApp(tk.Tk):
 
     def display_match(self, match):
         """1つのマッチデータを整形して表示"""
-        start_time = match.get("start_time", "N/A")
-        end_time = match.get("end_time", "N/A")
+        #start_time = match.get("start_time", "N/A")
+        #end_time = match.get("end_time", "N/A")
+        start_time = format_time(match.get("start_time", "N/A"))
+        end_time = format_time(match.get("end_time", "N/A"))
+
         rule = match.get("rule", {}).get("name", "ルール不明")
         stages = match.get("stages", [])
 
+        #ttk.Label(self.frame, text=f"開始: {start_time}", font=("Arial", 10)).pack(anchor="w", padx=20)
+        #ttk.Label(self.frame, text=f"終了: {end_time}", font=("Arial", 10)).pack(anchor="w", padx=20)
         ttk.Label(self.frame, text=f"開始: {start_time}", font=("Arial", 10)).pack(anchor="w", padx=20)
         ttk.Label(self.frame, text=f"終了: {end_time}", font=("Arial", 10)).pack(anchor="w", padx=20)
+
         ttk.Label(self.frame, text=f"ルール: {rule}", font=("Arial", 10)).pack(anchor="w", padx=20)
 
         if stages:
