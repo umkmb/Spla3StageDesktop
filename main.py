@@ -67,11 +67,11 @@ class MyApp(tk.Tk):
         self.style = ttk.Style()
 
         # トレイアイコン
-        self.protocol("WM_DELTE_WINDOW", self.minimize_to_tray)
+        self.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
         self.bind("<Unmap>", self.on_minimize)
         self.icon = None
         self.tray_thread = None
-        # self.run_tray = threading.Event()
+        self.run_tray = threading.Event()
 
         # 最小化イベントをバインド
         self.bind("<Unmap>", self.on_minimize)
@@ -201,7 +201,7 @@ class MyApp(tk.Tk):
                 "Splatoon3",
                 self.icon_img,
                 menu=Menu(
-                    MenuItem("Restore", self.restore_app),
+                    MenuItem("Restore", self.restore_app, default=True),
                     MenuItem("Quit", self.quit_app)
                 )
             )
