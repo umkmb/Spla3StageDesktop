@@ -1,6 +1,6 @@
 import tkinter as tk
 import my_icon
-import io
+import io, os, sys
 from tkinter import ttk
 from api_handler import fetch_data
 from dateutil.parser import parse
@@ -28,7 +28,13 @@ def format_time(iso_time):
         print(f"日時フォーマットエラー: {e}")
         return "不明な日時"
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
 
+    return os.path.join(base_path, relative_path)
 
 
 class MyApp(tk.Tk):
@@ -39,7 +45,7 @@ class MyApp(tk.Tk):
 
         # icon
         # self.icon_img = my_icon.get_photo_image4icon()
-        self.icon_img = Image.open("icon.png")
+        self.icon_img = Image.open(resource_path("icon.png"))
         self.tk_icon_img = ImageTk.PhotoImage(self.icon_img)
 
         self.iconphoto(True, self.tk_icon_img)
