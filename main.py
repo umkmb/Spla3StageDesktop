@@ -1,6 +1,6 @@
 import tkinter as tk
 import my_icon
-import io, os, sys
+import io, os, sys, time
 from tkinter import ttk
 from api_handler import fetch_data
 from dateutil.parser import parse
@@ -225,8 +225,16 @@ class MyApp(tk.Tk):
     def quit_app(self, *args):
         """アプリを終了"""
         if self.icon:
-            self.icon.stop()
-        self.destroy()
+            self.icon.stop()  # アイコンを停止
+            self.icon = None
+
+        # トレイアイコンが動作しているスレッドを終了させる
+        if self.tray_thread and self.tray_thread.is_alive():
+            self.run_tray.set()  # スレッドを停止するフラグを立てる
+            try:
+                self.tray_thread.join(timeout=1)  # スレッドを待機
+            except RuntimeError:
+                pass
 
     def on_minimize(self, event):
         """ウィンドウが最小化されたときにトレイに移動"""
