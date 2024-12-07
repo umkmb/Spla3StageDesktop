@@ -1,11 +1,12 @@
 import tkinter as tk
-from tkinter import ttk
 import my_icon
-
+import io
+from tkinter import ttk
 from api_handler import fetch_data
-from datetime import datetime
 from dateutil.parser import parse
-from tkinter import PhotoImage
+from PIL import Image, ImageTk
+from pystray import Icon, Menu, MenuItem
+import threading
 
 CATEGORY_MAP = {
     "regular": "レギュラーマッチ",
@@ -17,6 +18,7 @@ CATEGORY_MAP = {
     "fest_challenge": "フェスマッチ（チャレンジ）"
 }
 
+
 def format_time(iso_time):
     """ISO 8601形式の日時を日本語形式にフォーマットする"""
     try:
@@ -26,6 +28,9 @@ def format_time(iso_time):
         print(f"日時フォーマットエラー: {e}")
         return "不明な日時"
 
+
+
+
 class MyApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -33,8 +38,11 @@ class MyApp(tk.Tk):
         self.geometry("800x600")
 
         # icon
-        photo = my_icon.get_photo_image4icon()
-        self.iconphoto(True, photo)
+        # self.icon_img = my_icon.get_photo_image4icon()
+        self.icon_img = Image.open("icon.png")
+        self.tk_icon_img = ImageTk.PhotoImage(self.icon_img)
+
+        self.iconphoto(True, self.tk_icon_img)
 
         # スクロール可能なキャンバスを作成
         self.canvas = tk.Canvas(self)
@@ -58,6 +66,17 @@ class MyApp(tk.Tk):
 
         self.style = ttk.Style()
 
+        # トレイアイコン
+        self.protocol("WM_DELTE_WINDOW", self.minimize_to_tray)
+        self.bind("<Unmap>", self.on_minimize)
+        self.icon = None
+        self.tray_thread = None
+        # self.run_tray = threading.Event()
+
+        # 最小化イベントをバインド
+        self.bind("<Unmap>", self.on_minimize)
+
+        # 起動時にAPIをたたく
         self.load_data()
 
     def load_data(self):
@@ -125,13 +144,15 @@ class MyApp(tk.Tk):
             for category, matches in category_matches.items():
                 category_name = CATEGORY_MAP.get(category, category)
                 rule = matches[0].get("rule", {}).get("name", "ルール不明")  # 同じカテゴリでルールは共通
-                ttk.Label(self.frame, text=f"    ・{category_name}[{rule}]", font=("Arial", 10)).pack(anchor="w", pady=2)
+                ttk.Label(self.frame, text=f"    ・{category_name}[{rule}]", font=("Arial", 10)).pack(anchor="w",
+                                                                                                      pady=2)
 
                 for match in matches:
                     stages = match.get("stages", [])
                     for stage in stages:
                         stage_name = stage.get("name", "不明なステージ")
-                        ttk.Label(self.frame, text=f"        ・{stage_name}", font=("Arial", 10)).pack(anchor="w", pady=2)
+                        ttk.Label(self.frame, text=f"        ・{stage_name}", font=("Arial", 10)).pack(anchor="w",
+                                                                                                       pady=2)
 
             ttk.Separator(self.frame, orient="horizontal").pack(fill="x", pady=10)
 
@@ -158,16 +179,54 @@ class MyApp(tk.Tk):
             ttk.Label(card_frame, text=f"ルール: {rule}", font=("Arial", 10), style="Card.TLabel").pack(anchor="w")
 
         if stages:
-            ttk.Label(card_frame, text="ステージ:", font=("Arial", 10, "italic"), style="Card.TLabel").pack(anchor="w", padx=10)
+            ttk.Label(card_frame, text="ステージ:", font=("Arial", 10, "italic"), style="Card.TLabel").pack(anchor="w",
+                                                                                                            padx=10)
             for stage in stages:
                 stage_name = stage.get("name", "不明なステージ")
-                ttk.Label(card_frame, text=f"- {stage_name}", font=("Arial", 10), style="Card.TLabel").pack(anchor="w", padx=20)
+                ttk.Label(card_frame, text=f"- {stage_name}", font=("Arial", 10), style="Card.TLabel").pack(anchor="w",
+                                                                                                            padx=20)
 
         ttk.Separator(card_frame, orient="horizontal").pack(fill="x", pady=5)
 
     def _on_mousewheel(self, event):
         """マウスホイールでスクロール"""
         self.canvas.yview_scroll(-1 * int(event.delta / 120), "units")
+
+    def minimize_to_tray(self):
+        """ウィンドウをタスクトレイに移動"""
+        self.withdraw()  # ウィンドウを隠す
+
+        if self.icon is None:
+            self.icon = Icon(
+                "Splatoon3",
+                self.icon_img,
+                menu=Menu(
+                    MenuItem("Restore", self.restore_app),
+                    MenuItem("Quit", self.quit_app)
+                )
+            )
+
+        self.tray_thread = threading.Thread(target=self.icon.run)
+        self.tray_thread.start()
+
+    def restore_app(self, *args):
+        """アプリを復元"""
+        self.deiconify()  # ウィンドウを表示
+        if self.icon:
+            self.icon.stop()  # トレイアイコンを停止
+            self.icon = None
+
+    def quit_app(self, *args):
+        """アプリを終了"""
+        if self.icon:
+            self.icon.stop()
+        self.destroy()
+
+    def on_minimize(self, event):
+        """ウィンドウが最小化されたときにトレイに移動"""
+        if self.state() == "iconic":  # 最小化状態をチェック
+            self.minimize_to_tray()
+
 
 if __name__ == "__main__":
     app = MyApp()
