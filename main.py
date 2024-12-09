@@ -1,5 +1,4 @@
 import tkinter as tk
-import my_icon
 import io, os, sys, time
 from tkinter import ttk
 from api_handler import fetch_data
@@ -73,7 +72,6 @@ class MyApp(tk.Tk):
         self.style = ttk.Style()
 
         # トレイアイコン
-        self.protocol("WM_DELETE_WINDOW", self.minimize_to_tray)
         self.bind("<Unmap>", self.on_minimize)
         self.icon = None
         self.tray_thread = None
@@ -212,8 +210,10 @@ class MyApp(tk.Tk):
                 )
             )
 
-        self.tray_thread = threading.Thread(target=self.icon.run)
-        self.tray_thread.start()
+        # `icon.run`をスレッドで実行
+        if self.tray_thread is None or not self.tray_thread.is_alive():
+            self.tray_thread = threading.Thread(target=self.icon.run, daemon=True)
+            self.tray_thread.start()
 
     def restore_app(self, *args):
         """アプリを復元"""
@@ -225,16 +225,18 @@ class MyApp(tk.Tk):
     def quit_app(self, *args):
         """アプリを終了"""
         if self.icon:
-            self.icon.stop()  # アイコンを停止
+            self.icon.stop()  # トレイアイコンを停止
             self.icon = None
 
         # トレイアイコンが動作しているスレッドを終了させる
         if self.tray_thread and self.tray_thread.is_alive():
-            self.run_tray.set()  # スレッドを停止するフラグを立てる
             try:
-                self.tray_thread.join(timeout=1)  # スレッドを待機
+                self.tray_thread.join(timeout=0.1)  # スレッドの終了を待機
             except RuntimeError:
-                pass
+                print("Tray thread could not be joined")
+
+        self.destroy()  # Tkinterアプリを完全終了
+        sys.exit(0)  # プロセスを終了
 
     def on_minimize(self, event):
         """ウィンドウが最小化されたときにトレイに移動"""
