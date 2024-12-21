@@ -1,5 +1,7 @@
 # Spla3StageDesktop
 
+![Spla3StageDesktop](https://github.com/user-attachments/assets/f2e71e82-2f32-4750-89e6-71fcf8db289a)
+
 これは、スプラトゥーン3のステージ情報を取得するデスクトップアプリです。
 
 ## 特徴
